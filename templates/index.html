@@ -1,0 +1,101 @@
+<html>
+	<head>
+		<title>OpenVideoData</title>
+		<style>
+			body {
+				font-family: sans-serif;
+				max-width: 800px;
+				margin: 50px auto;
+				padding: 0px 10px;
+			}
+			li {
+				margin-bottom: .5em;
+			}
+		</style>
+		<script src="https://hcaptcha.com/1/api.js" async defer></script>
+	</head>
+	<body>
+		<h1>OpenVideoData</h1>
+		<p>
+			OpenVideoData is a public, collaborative project to catalog video metadata from across the web. Like discogs for web video!
+		</p>
+		<div style="text-align: center; font-weight: bold;">
+			<p>{{ uploads }} crowdsourced metadata uploads</p>
+			<p>{{ videos }} unique videos tracked</p>
+		</div>
+		<!--
+		<p>
+			Since most web video hosts have no API or severe rate limits, we instead rely on volunteers to upload video metadata as they naturally browse. The goal is to develop extensions for all the major browsers that unintrusively extract this information and upload it to our servers. Full dumps of the database will then be made regularly available for free and unrestricted use by the public.
+		</p>
+-->
+		<h3>How it works</h3>
+		<ol>
+			<li>You install an OpenVideoData uploader extension</li>
+			<li>You happen to navigate to one of the video sites supported by OpenVideoData</li>
+			<li>The extension automatically reads any video metadata already fetched by your browser, extracts a small portion and sends it to the OpenVideoData server</li>
+			<li>Full database dumps, scrubbed of any identifying information, are made freely available on this website for anyone to use</li>
+		</ol>
+		<h3>What's collected</h3>
+		<ul>
+			<li>Video metadata such as title, description, view count, tags, and more</li>
+			<li>Upload key - obtainable with just a captcha solve, used solely for spam prevention, and <b>scrubbed from all public data</b></li>
+			<li>Upload time - <b>rounded to the nearest day in all public data</b></li>
+		</ul>
+		<h3>How to start donating metadata</h3>
+		<p>
+			<i>By following these instructions to install one of the extensions and obtain an upload key, you agree to forfeit any copyright or related claims on any data uploaded on your behalf.</i>
+		</p>
+		<ol>
+			<li>
+				<p>Install an extension:</p>
+				<ul>
+					<li>
+						<p><a href="/static/openvideodata.user.js">Greasemonkey User Script</a></p>
+						<ul>
+							<li>Tested on: Violentmonkey (Firefox)</li>
+							<li>Supports: YouTube</li>
+						</ul>
+					</li>
+				</ul>
+			</li>
+			<li>
+				<p>Get an upload key and add it to your extension's configuration:</p>
+				<form action="/api/v1/requestKey" method=POST id="requestKeyForm">
+					<div class="h-captcha" data-sitekey="a17c9b70-68cc-4e82-9eec-d1adab203ce6"></div>
+					<input type="submit" value="Request" />
+				</form>
+				<p id="keyOutput"></p>
+			</li>
+		</ol>
+		<h3>Other ways to contribute</h3>
+		<ul>
+			<li><a href="https://github.com/rjeli/openvideodata.org">Github</a></li>
+		</ul>
+		<h3>Dumps:</h3>
+		<p>
+			All these database dumps are released into the public domain according to <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.
+		</p>
+		<p>
+			OpenVideoData.org is operated from the United States, and we don't have database copyright (you can't copyright collections of objective facts). I'm not a copyright expert, but if I get any kind of cease & desist I'll just IP ban non-Americans. Sorry!
+		</p>
+		<ul>
+			<li>... dumps coming soon</li>
+		</ul>
+		<script>
+			const $requestKeyForm = document.querySelector('#requestKeyForm');
+			$requestKeyForm.addEventListener('submit', evt => {
+				evt.preventDefault();
+				const xhr = new XMLHttpRequest();
+				xhr.addEventListener('load', evt => {
+					console.log('xhr load:', evt.target.responseText);
+					const key = JSON.parse(evt.target.responseText);
+					document.querySelector('#keyOutput').innerText = key
+						? 'Your upload key: ' + key
+						: 'error getting key';
+				});
+				xhr.open('POST', '/api/v1/requestKey');
+				xhr.send(new FormData($requestKeyForm));
+			});
+		</script>
+	</body>
+</html>
