@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenVideoData Server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/app
+Environment="HCAPTCHA_SECRET=%HCAPTCHA%"
+ExecStart=/usr/local/bin/uvicorn --port 8000 --workers 4 server:app
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -10,6 +10,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from databases import Database
+import sqlalchemy as sa
+import sqlite3
 import httpx
 
 HCAPTCHA_SECRET = os.getenv('HCAPTCHA_SECRET')
@@ -18,9 +20,30 @@ assert HCAPTCHA_SECRET
 app = FastAPI()
 app.mount('/static', StaticFiles(directory='static'), name='static')
 
-db = Database('sqlite:///db.sqlite3')
-
 templates = Jinja2Templates(directory='templates')
+
+class PragmaFactory(sqlite3.Connection):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.execute('pragma journal_mode=WAL')
+        self.execute('pragma synchronous=NORMAL')
+
+db = Database('sqlite:///db.sqlite3', factory=PragmaFactory)
+
+metadata = sa.MetaData()
+video_uploads = sa.Table('video_uploads', metadata,
+    sa.Column('uploader', sa.Text()),
+    sa.Column('uploaded_at', sa.Integer()),
+    sa.Column('site', sa.Text()),
+    sa.Column('video_id', sa.Text()),
+    sa.Column('channel_id', sa.Text()),
+    sa.Column('channel_url', sa.Text()),
+    sa.Column('channel_title', sa.Text()),
+    sa.Column('title', sa.Text()),
+    sa.Column('view_count', sa.Integer()),
+    sa.Column('description', sa.Text()),
+    sa.Column('description_snippet', sa.Text()),
+)
 
 @app.on_event('startup')
 async def startup():
@@ -35,7 +58,7 @@ async def root(req: Request):
     uploads = await db.fetch_val(
         'select count(*) from video_uploads')
     videos = await db.fetch_val(
-        'select count(distinct site_video_id) from video_uploads')
+        'select count(distinct video_id) from video_uploads')
     return templates.TemplateResponse('index.html', dict(
         request=req,
         uploads=uploads,
@@ -66,16 +89,17 @@ async def key_exists(key: str):
 
 @app.get('/api/v1/verifyKey/{key}')
 async def verify_key(key: str):
-    return dict(exists=key_exists(key))
+    return dict(exists=(await key_exists(key)))
 
 class VideoData(BaseModel):
     videoId: str
-    title: Optional[str]
     channelId: Optional[str]
+    channelUrl: Optional[str]
     channelTitle: Optional[str]
-    uploadDate: Optional[datetime.datetime]
+    title: Optional[str]
     viewCount: Optional[int]
-    desc: Optional[str]
+    description: Optional[str]
+    descriptionSnippet: Optional[str]
 
 class UploadData(BaseModel):
     uploadKey: str
@@ -95,15 +119,21 @@ async def upload(data: UploadData):
             uploader=data.uploadKey,
             uploaded_at=int(time.time()),
             site=data.site,
-            site_video_id=video.videoId,
-            site_channel_id=video.channelId,
-            title=video.title,
+            video_id=video.videoId,
+            channel_id=video.channelId,
+            channel_url=video.channelUrl,
             channel_title=video.channelTitle,
+            title=video.title,
             view_count=video.viewCount,
-            description=video.desc,
+            description=video.description,
+            description_snippet=video.descriptionSnippet,
         ))
+    async with db.transaction():
+        await db.execute_many(query=video_uploads.insert(), values=values)
+    '''
     await db.execute_many(
         'insert into video_uploads(uploader, uploaded_at, site, site_video_id, site_channel_id, title, channel_title, view_count, description) '
         +'values (:uploader, :uploaded_at, :site, :site_video_id, :site_channel_id, :title, :channel_title, :view_count, :description)',
         values=values)
+    '''
     return {}

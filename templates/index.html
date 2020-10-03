@@ -11,13 +11,19 @@
 			li {
 				margin-bottom: .5em;
 			}
+			#payloadviewer ul {
+				list-style-type: none;
+			}
+			#payloadviewer li {
+				margin-bottom: initial;
+			}
 		</style>
 		<script src="https://hcaptcha.com/1/api.js" async defer></script>
 	</head>
 	<body>
 		<h1>OpenVideoData</h1>
 		<p>
-			OpenVideoData is a public, collaborative project to catalog video metadata from across the web. Like discogs for web video!
+			OpenVideoData is a public, collaborative project to crowdsource video metadata from across the web. All uploaded metadata is completely anonymous (we track the videos, not you!) and freely available for research and education.
 		</p>
 		<div style="text-align: center; font-weight: bold;">
 			<p>{{ uploads }} crowdsourced metadata uploads</p>
@@ -30,17 +36,27 @@
 -->
 		<h3>How it works</h3>
 		<ol>
-			<li>You install an OpenVideoData uploader extension</li>
-			<li>You happen to navigate to one of the video sites supported by OpenVideoData</li>
-			<li>The extension automatically reads any video metadata already fetched by your browser, extracts a small portion and sends it to the OpenVideoData server</li>
+			<li>You install an OpenVideoData browser extension</li>
+			<li>
+				You happen to navigate to one of the video sites supported by OpenVideoData
+				<div style="margin-top: 10px; margin-left: 10px; font-style: italic;">(currently only youtube, more coming soon!)</div>
+			</li>
+			<li>
+				The extension automatically reads any video metadata already fetched by your browser, extracts a small portion and sends it to the OpenVideoData server
+				<div style="margin-top: 10px; margin-left: 10px; font-style: italic;">(no additional requests to the server, ever, it's all client side)</div>
+			</li>
 			<li>Full database dumps, scrubbed of any identifying information, are made freely available on this website for anyone to use</li>
 		</ol>
 		<h3>What's collected</h3>
 		<ul>
 			<li>Video metadata such as title, description, view count, tags, and more</li>
-			<li>Upload key - obtainable with just a captcha solve, used solely for spam prevention, and <b>scrubbed from all public data</b></li>
-			<li>Upload time - <b>rounded to the nearest day in all public data</b></li>
+			<li>Metadata upload key - obtainable with just a captcha solve, used solely for spam prevention, and <b>scrubbed from all public data</b></li>
+			<li>Metadata upload time - <b>rounded to the nearest day in all public data</b></li>
 		</ul>
+		<p>
+			<button onclick="showpayload()">View an example payload from navigating to the Youtube home page</button>
+			<div id="payloadviewer"></div>
+		</p>
 		<h3>How to start donating metadata</h3>
 		<p>
 			<i>By following these instructions to install one of the extensions and obtain an upload key, you agree to forfeit any copyright or related claims on any data uploaded on your behalf.</i>
@@ -49,6 +65,7 @@
 			<li>
 				<p>Install an extension:</p>
 				<ul>
+					<!--
 					<li>
 						<p><a href="/static/openvideodata.user.js">Greasemonkey User Script</a></p>
 						<ul>
@@ -56,10 +73,14 @@
 							<li>Supports: YouTube</li>
 						</ul>
 					</li>
+					-->
+					<li>
+						<a href="#" style="text-decoration: line-through;">Firefox (coming soon!)</a>
+					</li>
 				</ul>
 			</li>
 			<li>
-				<p>Get an upload key and add it to your extension's configuration:</p>
+				<p>Get an upload key and add it to your extension's menu:</p>
 				<form action="/api/v1/requestKey" method=POST id="requestKeyForm">
 					<div class="h-captcha" data-sitekey="a17c9b70-68cc-4e82-9eec-d1adab203ce6"></div>
 					<input type="submit" value="Request" />
@@ -67,16 +88,17 @@
 				<p id="keyOutput"></p>
 			</li>
 		</ol>
-		<h3>Other ways to contribute</h3>
+		<h3>Source code</h3>
 		<ul>
-			<li><a href="https://github.com/rjeli/openvideodata.org">Github</a></li>
+			<li><a href="https://github.com/openvideodata/ovd-server">ovd-server</a> - the web server serving this page, as well as the upload API</li>
+			<li><a href="https://github.com/openvideodata/ovd-extensions">ovd-extensions</a> - the uploader web extensions</li>
 		</ul>
 		<h3>Dumps:</h3>
 		<p>
 			All these database dumps are released into the public domain according to <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.
 		</p>
 		<p>
-			OpenVideoData.org is operated from the United States, and we don't have database copyright (you can't copyright collections of objective facts). I'm not a copyright expert, but if I get any kind of cease & desist I'll just IP ban non-Americans. Sorry!
+			OpenVideoData.org is operated from the United States, and we don't have database copyright (you can't copyright collections of objective facts). I'm not a copyright expert, nor can I afford a lawyer, so if I get any kind of cease & desist I'll just IP ban non-Americans. Sorry!
 		</p>
 		<ul>
 			<li>... dumps coming soon</li>
@@ -96,6 +118,27 @@
 				xhr.open('POST', '/api/v1/requestKey');
 				xhr.send(new FormData($requestKeyForm));
 			});
+			let hasShown = false;
+			function showpayload(evt) {
+				if (hasShown) return;
+				hasShown = true;
+				const $style = document.createElement('link');
+				$style.rel = 'stylesheet';
+				$style.type = 'text/css';
+				$style.href = '/static/jsonTree.css';
+				document.body.appendChild($style);
+				const $script = document.createElement('script');
+				$script.src = '/static/jsonTree.js';
+				document.body.appendChild($script);
+				$script.onload = () => {
+					const $div = document.querySelector('#payloadviewer');
+					fetch('/static/example_upload.json')
+						.then(resp => resp.json())
+						.then(data => {
+							jsonTree.create(data, $div);
+						});
+				};
+			}
 		</script>
 	</body>
 </html>

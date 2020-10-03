@@ -4,6 +4,7 @@ jinja2
 aiofiles
 databases
 databases[sqlite]
+sqlalchemy
 aiosqlite
 python-multipart
 httpx
